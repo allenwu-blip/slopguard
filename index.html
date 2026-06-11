@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slopguard — does your text sound like AI?</title>
+<style>
+  :root{
+    --paper:#f4efe4; --paper-2:#efe8da; --ink:#1c1813; --ink-soft:#6a6051;
+    --rule:#d8cfbd; --ember:#bd3c1e; --ember-soft:#e7c9bf; --amber:#b07a16; --good:#3f6b3f;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Hoefler Text",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .wrap{max-width:740px;margin:0 auto;padding:0 28px 80px}
+
+  header.mast{border-bottom:2px solid var(--ink);margin-top:40px;padding-bottom:16px}
+  .mast h1{font-size:44px;line-height:1;letter-spacing:-.02em;margin:0;font-weight:600}
+  .mast h1 .mk{color:var(--ember)}
+  .mast .tag{font-size:17px;line-height:1.5;color:var(--ink-soft);margin:12px 0 0;max-width:540px}
+  .mast .tag b{color:var(--ink);font-weight:600}
+
+  /* paste box */
+  .label{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--ink-soft);margin:30px 0 8px;display:flex;justify-content:space-between;align-items:baseline}
+  textarea{width:100%;min-height:150px;border:1px solid var(--ink);background:var(--paper);
+    resize:vertical;padding:18px 20px;font-family:var(--serif);font-size:18px;line-height:1.6;
+    color:var(--ink);outline:0}
+  textarea:focus{border-color:var(--ember)}
+  textarea::placeholder{color:#a99e88}
+
+  /* ── THE VERDICT ── one plain answer */
+  #result[hidden]{display:none}
+  .verdict{display:flex;align-items:flex-start;gap:14px;margin:26px 0 0;padding:22px 24px;
+    border:1px solid var(--ink);background:var(--paper-2)}
+  .dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto;margin-top:7px;background:var(--good)}
+  .dot.ai{background:var(--ember)} .dot.some{background:var(--amber)}
+  .v-body{flex:1}
+  .v-title{font-size:26px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:baseline;gap:12px}
+  .v-score{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-soft);font-weight:400}
+  .v-why{font-size:16.5px;line-height:1.55;color:var(--ink);margin:8px 0 0}
+  .v-why em{font-style:normal;color:var(--ember);font-weight:600}
+
+  /* ── THE FIX ── the hero action */
+  .fix[hidden]{display:none}
+  .fix{border:1px solid var(--ink);border-top:3px solid var(--ember);margin:16px 0 0;background:var(--paper)}
+  .fix-h{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;
+    border-bottom:1px solid var(--rule)}
+  .fix-h .t{font-size:18px;font-weight:600}
+  .fix-text{padding:20px 24px;font-size:17px;line-height:1.65;white-space:pre-wrap}
+  .fix-foot{padding:0 24px 20px;font-size:15px;color:var(--ink-soft);line-height:1.5}
+  .fix-foot .note{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin:0 0 12px;letter-spacing:.02em}
+
+  button{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    padding:10px 16px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);
+    cursor:pointer;border-radius:0;transition:.12s}
+  button:hover{background:var(--ember);border-color:var(--ember)}
+  button.link{background:transparent;color:var(--ember);border:0;border-bottom:1px solid var(--ember);
+    padding:0 0 1px;font-size:15px;letter-spacing:0;text-transform:none;font-family:var(--serif)}
+  button.link:hover{background:transparent;color:var(--ink);border-color:var(--ink)}
+
+  /* ── optional details ── */
+  details{margin:16px 0 0;border-top:1px solid var(--rule);padding-top:6px}
+  summary{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-soft);cursor:pointer;padding:10px 0;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸ ";color:var(--ember)}
+  details[open] summary::before{content:"▾ "}
+  .marks{border:1px solid var(--rule);background:var(--paper);padding:20px 22px;margin:6px 0 0;
+    font-size:16px;line-height:1.8}
+  mark.flag{background:transparent;color:var(--ink);border-bottom:2px solid var(--ember);
+    text-decoration:underline wavy var(--ember-soft);text-underline-offset:3px}
+  .coach{margin:16px 0 0}
+  .coach .note{padding:12px 0;border-bottom:1px dotted var(--rule)}
+  .coach .note:last-child{border-bottom:0}
+  .coach .note h4{margin:0 0 3px;font-size:15px;font-weight:600}
+  .coach .note h4 .ex{font-family:var(--mono);font-size:11px;color:var(--ember);font-weight:400;text-transform:none;letter-spacing:0}
+  .coach .note p{margin:0;font-size:14.5px;line-height:1.55;color:var(--ink-soft)}
+
+  .examples{margin:24px 0 0;font-size:14px;color:var(--ink-soft)}
+  .examples button{font-family:var(--serif);font-size:14px;text-transform:none;letter-spacing:0;
+    padding:4px 11px;background:transparent;color:var(--ink);border:1px solid var(--rule);margin-left:4px}
+  .examples button:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+  footer{margin:40px 0 0;border-top:1px solid var(--rule);padding-top:16px;
+    font-size:13.5px;color:var(--ink-soft);line-height:1.6}
+  footer b{color:var(--ink)}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+    padding:11px 20px;opacity:0;transition:.18s;pointer-events:none}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <h1>Slop<span class="mk">guard</span></h1>
+    <p class="tag">Paste any text and find out: <b>does it read like AI wrote it?</b> Slopguard catches the common tells of AI’s writing voice and gives you a cleaner draft to start from. Everything runs in your browser — nothing you paste ever leaves this page.</p>
+  </header>
+
+  <div class="label"><span>Paste your text</span><span id="wc"></span></div>
+  <textarea id="in" placeholder="Paste an email, a post, a paragraph an AI wrote for you…"></textarea>
+
+  <section id="result" hidden>
+    <div class="verdict">
+      <span class="dot" id="dot"></span>
+      <div class="v-body">
+        <div class="v-title"><span id="vtitle">—</span><span class="v-score" id="vscore"></span></div>
+        <p class="v-why" id="vwhy"></p>
+      </div>
+    </div>
+
+    <div class="fix" id="fix" hidden>
+      <div class="fix-h"><span class="t">Here’s a cleaner version</span><button id="copyClean">Copy</button></div>
+      <div class="fix-text" id="fixText"></div>
+      <div class="fix-foot">
+        <p class="note" id="fixNote"></p>
+        Want a perfect rewrite that keeps your meaning? <button class="link" id="copyPrompt">Copy a ready-made prompt</button> and paste it into ChatGPT or Claude.
+      </div>
+    </div>
+
+    <details id="details">
+      <summary>Show me exactly what’s wrong (and why)</summary>
+      <div class="marks" id="proof"></div>
+      <div class="coach" id="coach"></div>
+    </details>
+  </section>
+
+  <div class="examples">Don’t have text handy? Try:
+    <button data-ex="slop">a paragraph of AI-slop</button>
+    <button data-ex="copy">marketing copy</button>
+    <button data-ex="pg">real human writing</button>
+  </div>
+
+  <footer>
+    <b>How it works.</b> Slopguard looks for the tells of AI’s default writing voice — stock phrases (“leverage”, “seamless”, “delve”), the “it’s not just X — it’s Y” move, em-dash drama, and rule-of-three lists. It’s good at catching text written in that default voice. It can’t catch an AI that’s deliberately imitating one specific person’s style — and the cleaner version is a quick fix, not a full rewrite (use the prompt for that).
+  </footer>
+</div>
+<div class="toast" id="toast">Copied ✓</div>
+
+<script>
+"use strict";
+// ───────── detector (deterministic, public AI-tell lexicon) ─────────
+const STOCK = [
+ /i hope (this (email|message) finds you well|you('re| are) doing well)/g,
+ /i('d| would) be (happy|delighted|glad|more than happy) to/g,
+ /(please )?(feel free|don't hesitate) to (reach out|ask|contact)/g,
+ /in (today's|this) (fast-?paced|ever-?(changing|evolving)|digital|modern) (world|landscape|age)/g,
+ /at the end of the day/g, /it('s| is) (worth|important) (noting|to note|mentioning)/g,
+ /that (being said|said,)/g, /when it comes to/g, /in the (realm|world) of/g,
+ /navigat(e|ing) the (complexit(?:y|ies)|landscape|challenges?)/g, /a testament to/g,
+ /(rich|vibrant) tapestry/g, /delv(e|ing) into/g, /underscor(e|es|ing|ed)/g,
+ /look no further/g, /rest assured/g, /we('ve| have) got you covered/g,
+ /game-?changer/g, /unlock (the |your )?(power|potential|secrets)/g,
+ /take (it|your \w+) to the next level/g, /elevate your/g, /embark on (a|your) journey/g,
+ /ever-?(evolving|changing|growing)/g, /\bseamless(ly)?\b/g, /\brobust\b/g,
+ /\bcutting-?edge\b/g, /\bleverag(e|ing|ed)\b/g, /\bsynerg(?:y|ies)\b/g, /\bholistic\b/g,
+ /\bcurat(e|ed|ing)\b/g, /\bbespoke\b/g, /\bmyriad\b/g, /\bplethora\b/g,
+ /\bstreamlin(e|ed|ing)\b/g, /\bempower(s|ing|ed)?\b/g, /\bfoster(s|ing|ed)?\b/g,
+ /\bharness(ing| the)?\b/g, /\bpivotal\b/g, /\bparamount\b/g, /\btransformative\b/g,
+ /\bsupercharge\b/g, /\bunparalleled\b/g, /\bmeticulous(ly)?\b/g, /\bcatalyst\b/g,
+ /the (beauty|magic|power) of/g, /in conclusion/g, /to sum (up|it up)/g,
+ /\bmoreover\b/g, /\bfurthermore\b/g, /\bnevertheless\b/g, /\badditionally,/g,
+ /\bnotably,/g, /\bcrucially,/g, /\bimportantly,/g, /\bultimately,/g, /\bdive (deep|in)\b/g,
+];
+const CONSTRUCTIONS = [
+ [/it'?s not (just|only|merely|about) [^.,;—]{2,40}[—,] it'?s/g, "“it’s not just X — it’s Y”"],
+ [/not (just|only|merely) [^.,;—]{2,40} but (also )?/g, "“not just X but Y”"],
+ [/this (isn'?t|is not) (just )?about [^.]{2,40}\. it'?s about/g, "“this isn’t about X. it’s about Y”"],
+ [/here'?s the (thing|kicker|deal|catch|secret|truth)[:.]/g, "“here’s the thing:”"],
+ [/(but )?let'?s (break it down|dive in|unpack|explore)/g, "“let’s break it down”"],
+ [/the (best|wild|crazy|kicker) part\??[:.]?/g, "“the best part”"],
+];
+const HEDGES = [/\bperhaps\b/g,/\barguably\b/g,/\bit (seems|appears) (that|like)\b/g,/\bone (might|could) (argue|say)\b/g,/\bto some (extent|degree)\b/g];
+
+function analyze(text){
+  const low=text.toLowerCase();
+  const nW=Math.max(1,(text.match(/[\p{L}\p{N}]+/gu)||[]).length);
+  const marks=[]; let stockN=0,constrN=0,hedgeN=0; const phrases=[],patterns=[];
+  for(const re of STOCK){ re.lastIndex=0; let m; while((m=re.exec(low))){ stockN++;
+    const txt=text.slice(m.index,m.index+m[0].length); phrases.push(txt);
+    marks.push({s:m.index,e:m.index+m[0].length,label:txt}); } }
+  for(const [re,label] of CONSTRUCTIONS){ re.lastIndex=0; let m; while((m=re.exec(low))){ constrN++;
+    patterns.push(label); marks.push({s:m.index,e:m.index+m[0].length,label}); } }
+  for(const re of HEDGES){ re.lastIndex=0; while(re.exec(low)) hedgeN++; }
+  const emdash=(text.split("—").length-1+text.split(" - ").length-1)/Math.max(1,text.length/100);
+  const tric=(low.match(/[\w][^,.;:]{1,30},\s[^,.;:]{1,30},\s(?:and|or)\s[^,.;:]{1,30}/g)||[]).length;
+  const sents=text.split(/[.!?。！？\n]+/).map(s=>s.trim()).filter(Boolean);
+  let uni=0; if(sents.length>=4){ const L=sents.map(s=>s.length),mean=L.reduce((a,b)=>a+b,0)/L.length,
+    sd=Math.sqrt(L.reduce((a,b)=>a+(b-mean)**2,0)/L.length); uni=Math.max(0,1-sd/(mean+1e-9)); }
+  const hasContr=/\b\w+['’](s|t|re|ve|ll|d|m)\b/.test(low);
+  const stock_rate=stockN/(nW/60), heavy=Math.max(0,emdash-1);
+  const primary=2.4*stock_rate+3*constrN+1.4*Math.min(heavy,3)+1.4*tric+0.9*hedgeN/(nW/80);
+  const secondary=1.6*uni+((!hasContr&&nW>25)?1.2:0);
+  const raw=primary+secondary*Math.min(1,primary/1.5);
+  const score=Math.max(0,Math.min(100,Math.round(100*(1-Math.pow(2,-raw/3)))));
+  // de-dupe marks/phrases for display
+  const seen=new Set(), upn=[]; for(const p of phrases){const k=p.toLowerCase(); if(!seen.has(k)){seen.add(k);upn.push(p);}}
+  return {score,marks,words:nW,phrases:upn,patterns:[...new Set(patterns)],
+    emdashHeavy:emdash>1.2,tric,hedges:hedgeN,noContr:(!hasContr&&nW>25),uni};
+}
+
+// ───────── plain-language "why" (concrete examples, no jargon) ─────────
+function whySentence(r){
+  const frags=[];
+  if(r.phrases.length) frags.push(`AI filler words like ${r.phrases.slice(0,3).map(p=>`<em>${esc(p)}</em>`).join(", ")}`);
+  if(r.patterns.length) frags.push(`canned patterns like ${esc(r.patterns[0])}`);
+  if(r.emdashHeavy) frags.push("over-used em-dashes (—)");
+  if(r.tric) frags.push("rule-of-three lists");
+  if(r.hedges) frags.push("hedging words");
+  if(r.noContr) frags.push("no contractions (stiff and formal)");
+  if(!frags.length && r.uni>0.7) frags.push("sentences that are all the same length");
+  if(!frags.length) return "A couple of small AI habits, nothing major.";
+  const top=frags.slice(0,3);
+  const joined = top.length===1?top[0]:top.slice(0,-1).join(", ")+", and "+top[top.length-1];
+  return "It’s full of "+joined+".";
+}
+
+// ───────── coaching (the teach-you layer, in the optional details) ─────────
+const WHY={
+  phrases:["AI filler words","“delve”, “leverage”, “seamless” — they sound authoritative but say nothing. Cut them and the sentence gets sharper."],
+  patterns:["The “not just X — it’s Y” move","A fake-profound lift AI loves. Usually X alone was the point — just say it."],
+  emdash:["Too many em-dashes (—)","AI over-uses the dash for drama. A period or comma reads calmer and more human."],
+  tric:["Rule-of-three lists","“fast, simple, and powerful” — AI’s default rhythm. Vary it; two lands blunter."],
+  hedge:["Hedging","“perhaps”, “it seems” water down what you’re saying. Mean it, or cut it."],
+  contr:["No contractions","“it is”, “do not” read stiff. People write “it’s”, “don’t”. Use them."],
+  uni:["Sentences all one length","A steady, lulling rhythm reads like AI. A short punch after a long line feels alive."],
+};
+function coachNotes(r){
+  const n=[];
+  if(r.phrases.length) n.push([WHY.phrases[0], r.phrases.slice(0,4).map(p=>`“${p}”`).join(", "), WHY.phrases[1]]);
+  if(r.patterns.length) n.push([WHY.patterns[0], "", WHY.patterns[1]]);
+  if(r.emdashHeavy) n.push([WHY.emdash[0], "", WHY.emdash[1]]);
+  if(r.tric) n.push([WHY.tric[0], "", WHY.tric[1]]);
+  if(r.hedges) n.push([WHY.hedge[0], "", WHY.hedge[1]]);
+  if(r.noContr) n.push([WHY.contr[0], "", WHY.contr[1]]);
+  if(r.uni>0.7 && n.length) n.push([WHY.uni[0], "", WHY.uni[1]]);
+  return n;
+}
+
+// ───────── de-slop (rough, grammar-safe quick clean) ─────────
+function deslop(text){
+  let t=text;
+  const KILL=[/\bin today's [^,.]{0,30}?(world|landscape|age|era)[,]?\s*/gi,
+    /\bit('s| is) (worth|important) (noting|to note|mentioning) that\s*/gi,
+    /\bat the end of the day[,]?\s*/gi,/\bthat (being said|said),?\s*/gi,
+    /\b(moreover|furthermore|additionally|notably|crucially|importantly|ultimately),\s*/gi,
+    /\b(rest assured|look no further)[,.]?\s*/gi,/\b(in conclusion|to sum (up|it up))[,:]?\s*/gi,
+    /\bneedless to say,?\s*/gi,/\bit goes without saying that\s*/gi];
+  for(const re of KILL) t=t.replace(re,"");
+  t=t.replace(/\bi('d| would) be (happy|delighted|glad|more than happy) to\b/gi,"I can");
+  t=t.replace(/it'?s not (just|only|merely|about) [^.,;—]{2,60}[—,]\s*(it'?s\s*)/gi,"it's ");
+  t=t.replace(/\bnot (just|only|merely) [^.,;—]{2,60} but (also )?/gi,"");
+  const SWAP=[[/\bleveraging\b/gi,"using"],[/\bleverages\b/gi,"uses"],[/\bleveraged\b/gi,"used"],[/\bleverage\b/gi,"use"],
+    [/\butilizing\b/gi,"using"],[/\butilizes\b/gi,"uses"],[/\butilize\b/gi,"use"],
+    [/\bseamless(ly)?\b/gi,"smooth"],[/\brobust\b/gi,"solid"],[/\bcutting-?edge\b/gi,"new"],
+    [/\bplethora of\b/gi,"lots of"],[/\bmyriad of\b/gi,"many"],[/\bgame-?changer\b/gi,"big deal"],
+    [/\bunparalleled\b/gi,"unmatched"],[/\bparamount\b/gi,"key"],[/\bnumerous\b/gi,"many"],[/\bsynerg(?:y|ies)\b/gi,"teamwork"],
+    [/\bsubsequently\b/gi,"then"],[/\bin order to\b/gi,"to"],[/\ba testament to\b/gi,"proof of"],
+    [/\bdelving into\b/gi,"looking at"],[/\bdelve into\b/gi,"look at"]];
+  for(const [re,w] of SWAP) t=t.replace(re,w);
+  const CONTR=[[/\bit is\b/gi,"it's"],[/\bthat is\b/gi,"that's"],[/\byou are\b/gi,"you're"],
+    [/\bwe are\b/gi,"we're"],[/\bdo not\b/gi,"don't"],[/\bdoes not\b/gi,"doesn't"],
+    [/\bdid not\b/gi,"didn't"],[/\bcannot\b/gi,"can't"],[/\bwill not\b/gi,"won't"],
+    [/\bis not\b/gi,"isn't"],[/\bare not\b/gi,"aren't"],[/\byou will\b/gi,"you'll"]];
+  for(const [re,w] of CONTR) t=t.replace(re,(m)=> m[0]===m[0].toUpperCase()? w[0].toUpperCase()+w.slice(1):w);
+  t=t.replace(/\s*—\s*/g,", ").replace(/\s+([,.;:])/g,"$1").replace(/,\s*,/g,",")
+     .replace(/\s{2,}/g," ").replace(/^\s*[,;]\s*/,"").trim();
+  t=t.replace(/(^|[.!?]\s+)([a-z])/g,(m,p,c)=>p+c.toUpperCase());
+  return t;
+}
+
+// ───────── render ─────────
+const $=id=>document.getElementById(id);
+const ta=$("in");
+function esc(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function renderMarks(text,marks){
+  marks=marks.slice().sort((a,b)=>a.s-b.s);
+  const merged=[]; for(const m of marks){ if(merged.length&&m.s<merged[merged.length-1].e) continue; merged.push(m); }
+  let out="",i=0; for(const m of merged){ out+=esc(text.slice(i,m.s));
+    out+=`<mark class="flag">${esc(text.slice(m.s,m.e))}</mark>`; i=m.e; }
+  out+=esc(text.slice(i)); $("proof").innerHTML=out;
+}
+function paint(){
+  const text=ta.value.trim();
+  $("wc").textContent = text? (analyze(text).words+" words") : "";
+  if(!text){ $("result").hidden=true; return; }
+  const r=analyze(text); $("result").hidden=false;
+  const ai = r.score>=45, some = r.score>=20 && r.score<45;
+  // verdict
+  $("dot").className = "dot"+(ai?" ai":some?" some":"");
+  $("vtitle").textContent = r.score>=70? "This reads like AI." : ai? "This leans AI — strong tells." : some? "Mostly human — a few AI tells." : "This reads human.";
+  $("vscore").textContent = `${r.score}/100 AI`;
+  $("vwhy").innerHTML = r.score<20 ? "Nothing to fix — it sounds like a person wrote it." : whySentence(r);
+  // the fix (only when there's something worth fixing)
+  const fix=$("fix");
+  if(r.score>=20){
+    fix.hidden=false;
+    const cleaned=deslop(text), after=analyze(cleaned).score;
+    $("fixText").textContent=cleaned;
+    $("fixNote").textContent = `My quick clean took it from ${r.score} to ${after}/100.` + (after>=45? "  Some deeper AI habits are left — use the prompt below for a full rewrite." : "");
+    window.__clean=cleaned;
+  } else fix.hidden=true;
+  // optional details
+  renderMarks(text,r.marks);
+  const notes=coachNotes(r);
+  $("coach").innerHTML = notes.map(([h,ex,p])=>
+    `<div class="note"><h4>${esc(h)}${ex?` <span class="ex">${esc(ex)}</span>`:""}</h4><p>${p}</p></div>`).join("");
+  $("details").style.display = r.score<20? "none":"block";
+}
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),1400);}
+ta.addEventListener("input",paint);
+$("copyClean").onclick=()=>navigator.clipboard.writeText(window.__clean||"").then(()=>toast("Cleaner version copied ✓"));
+$("copyPrompt").onclick=()=>{ const p=`Rewrite the text below in a plain, human voice. Cut every stock phrase, em-dash for drama, rule-of-three, and hedging word. Use contractions. Keep my meaning and facts exactly the same. Don't add any preamble — just give me the rewritten text.\n\n---\n${ta.value}`;
+  navigator.clipboard.writeText(p).then(()=>toast("Rewrite prompt copied — paste it into ChatGPT/Claude ✓")); };
+
+const EX={
+ slop:"In today's fast-paced digital world, it's worth noting that leveraging cutting-edge solutions is paramount. I'd be happy to help you navigate the complexities of this ever-evolving landscape. It's not just about technology — it's about transforming your business. Let's dive in and unlock the full potential of your robust, seamless workflow. At the end of the day, this is a testament to innovation, efficiency, and growth.",
+ copy:"Our platform empowers teams to seamlessly collaborate and unlock their full potential. It's not just a tool — it's a game-changer that elevates your workflow to the next level. Leverage our robust, cutting-edge features today.",
+ pg:"Most people who start startups do it because they want to get rich. But the way to get rich from a startup is not what most people think. You don't get rich by being paid a salary. You get rich by owning a piece of something that grows.",
+};
+document.querySelectorAll(".examples button").forEach(b=>b.onclick=()=>{ta.value=EX[b.dataset.ex];paint();ta.scrollIntoView({block:"start"});});
+const demo=new URLSearchParams(location.search).get("demo"); if(demo&&EX[demo]) ta.value=EX[demo];
+paint();
+</script>
+</body>
+</html>

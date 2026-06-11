@@ -1,0 +1,8 @@
+# nothing here should ever ship
+__pycache__/
+*.pyc
+.DS_Store
+*.png
+*.tmp
+_temp/
+node_modules/
