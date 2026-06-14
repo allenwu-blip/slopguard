@@ -1,0 +1,24 @@
+{
+  "name": "slopguard",
+  "id": "slopguard",
+  "owner": {
+    "name": "allenwu-blip"
+  },
+  "metadata": {
+    "description": "Detect AI-slop and rewrite it in a human voice — a free in-browser tool plus a Claude Code skill.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "slopguard",
+      "source": "./",
+      "description": "Ask Claude to de-AI-ify or humanize text and the skill finds the exact AI tells, rewrites them in a human voice, and re-checks the score so you watch it drop.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Allen Wu"
+      },
+      "keywords": ["ai-slop", "de-ai", "humanize", "writing", "ai-detector"],
+      "category": "workflow"
+    }
+  ]
+}

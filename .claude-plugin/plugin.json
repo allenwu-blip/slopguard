@@ -1,0 +1,11 @@
+{
+  "name": "slopguard",
+  "description": "Detect AI-slop and rewrite it in a human voice. Ask Claude to de-AI-ify or humanize text and the skill finds the exact AI tells, rewrites them, and re-checks the score so you watch it drop.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Allen Wu"
+  },
+  "license": "MIT",
+  "keywords": ["ai-slop", "de-ai", "humanize", "writing", "editing", "ai-detector"],
+  "skills": ["./skills/slopguard"]
+}
