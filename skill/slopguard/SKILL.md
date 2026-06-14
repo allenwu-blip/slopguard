@@ -12,22 +12,24 @@ detector keeps you honest — it gives a real before→after number, not a vibe.
 scores a fixed lexicon of tells, so a human who leans on these same phrases scores
 high too — it flags words, not authorship. Use the before→after drop as the signal.)
 
-## Step 1 — Detect (objective, deterministic)
+## Step 1 — Detect (deterministic)
 
-If a shell is available, run the bundled detector for an objective score + the
-exact flagged phrases. The script is `slopguard.py` in **this skill's directory**:
+If a shell is available, run the bundled detector. `slopguard.py` lives in **this
+skill's own directory** — the harness shows that path as this skill's base
+directory when the skill loads. Run it from there (it has zero dependencies, just
+Python 3):
 
 ```bash
-python "<this skill's dir>/slopguard.py" "<the user's text>" --json
-# long text → write it to a temp file and use --file <path>
+cd "<this skill's base directory>" && python3 slopguard.py "<the user's text>"
+# long text → write it to a temp file first and pass --file <path>
+# (add --json for machine-readable output: keys are score, verdict, signals, tells)
 ```
 
-It returns JSON: `score` (0–100), `phrases` (the exact AI filler words found),
-`patterns` (canned constructions), and flags for em-dash overuse, rule-of-three,
-hedging, missing contractions, and uniform sentence length.
-
-If no shell is available (e.g. claude.ai chat), detect by hand using the
-**AI-tell checklist** below — it is the same lexicon the script uses.
+It prints a `SLOP NN/100` score, a "What makes it read like AI" list, and "The
+exact giveaways" — the flagged filler words and patterns, named verbatim. Read
+those lines and relay them. If `python3` isn't found, try `python`. If there's no
+shell at all (e.g. claude.ai chat), skip the script and detect by hand using the
+**AI-tell checklist** at the bottom of this file — it's the same lexicon.
 
 ## Step 2 — Tell the user what's wrong (briefly)
 

@@ -20,11 +20,15 @@ python slopguard.py --file draft.txt --fix      # also print a de-slopped draft
 echo "some text" | python slopguard.py --json    # machine-readable
 ```
 
-**3. A Claude Code skill.** This is where it gets good. Copy `skill/slopguard/` into your `~/.claude/skills/` folder. After that, any time you ask Claude "make this sound less like AI" or "去AI化", it runs the detector to find the exact tells, rewrites the text itself, and re-checks the score so you can see it drop. The detector gives Claude precise targets; Claude does the actual rewriting.
+**3. A Claude Code skill.** This is the best part. Install it once:
 
 ```bash
-cp -r skill/slopguard ~/.claude/skills/
+git clone https://github.com/allenwu-blip/slopguard
+cp -r slopguard/skill/slopguard ~/.claude/skills/
+# then restart Claude Code so it picks up the new skill
 ```
+
+After that, any time you ask Claude *"make this sound less like AI"*, *"humanize this"*, or *"去AI化"*, the skill kicks in on its own: it runs the detector to find the exact tells, rewrites the text itself, and re-checks the score so you watch it drop. The detector gives Claude precise targets; Claude does the rewriting. No dependencies beyond Python 3.
 
 ## How it scores
 
